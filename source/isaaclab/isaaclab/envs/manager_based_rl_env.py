@@ -16,6 +16,7 @@ from typing import Any, ClassVar
 from isaacsim.core.version import get_version
 
 from isaaclab.managers import CommandManager, CurriculumManager, RewardManager, TerminationManager
+from isaaclab.sim import SimulationContext
 from isaaclab.ui.widgets import ManagerLiveVisualizer
 
 from .common import VecEnvStepReturn
@@ -64,11 +65,13 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
     cfg: ManagerBasedRLEnvCfg
     """Configuration for the environment."""
 
-    def __init__(self, cfg: ManagerBasedRLEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: ManagerBasedRLEnvCfg, sim: SimulationContext | None = None, render_mode: str | None = None, **kwargs):
         """Initialize the environment.
 
         Args:
             cfg: The configuration for the environment.
+            sim: The simulation context to use for the environment. Provide this only for multi-environment setups, 
+                where all environments share the same simulation context.
             render_mode: The render mode for the environment. Defaults to None, which
                 is similar to ``"human"``.
         """
@@ -76,7 +79,7 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         self.common_step_counter = 0
 
         # initialize the base class to setup the scene.
-        super().__init__(cfg=cfg)
+        super().__init__(cfg=cfg, sim=sim)
         # store the render mode
         self.render_mode = render_mode
 

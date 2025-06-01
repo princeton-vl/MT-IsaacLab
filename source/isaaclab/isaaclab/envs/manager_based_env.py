@@ -64,11 +64,13 @@ class ManagerBasedEnv:
     querying the :attr:`physics_dt` and the :attr:`step_dt` properties respectively.
     """
 
-    def __init__(self, cfg: ManagerBasedEnvCfg):
+    def __init__(self, cfg: ManagerBasedEnvCfg, sim: SimulationContext | None = None):
         """Initialize the environment.
 
         Args:
             cfg: The configuration object for the environment.
+            sim: The simulation context to use for the environment. Provide this only for multi-environment setups, 
+                where all environments share the same simulation context.
 
         Raises:
             RuntimeError: If a simulation context already exists. The environment must always create one
@@ -92,6 +94,8 @@ class ManagerBasedEnv:
             # the type-annotation is required to avoid a type-checking error
             # since it gets confused with Isaac Sim's SimulationContext class
             self.sim: SimulationContext = SimulationContext(self.cfg.sim)
+        elif sim is not None:
+            self.sim = sim
         else:
             # simulation context should only be created before the environment
             # when in extension mode
@@ -134,10 +138,11 @@ class ManagerBasedEnv:
         # viewport is not available in other rendering modes so the function will throw a warning
         # FIXME: This needs to be fixed in the future when we unify the UI functionalities even for
         # non-rendering modes.
-        if self.sim.render_mode >= self.sim.RenderMode.PARTIAL_RENDERING:
-            self.viewport_camera_controller = ViewportCameraController(self, self.cfg.viewer)
-        else:
-            self.viewport_camera_controller = None
+        if sim is None:
+            if self.sim.render_mode >= self.sim.RenderMode.PARTIAL_RENDERING:
+                self.viewport_camera_controller = ViewportCameraController(self, self.cfg.viewer)
+            else:
+                self.viewport_camera_controller = None
 
         # create event manager
         # note: this is needed here (rather than after simulation play) to allow USD-related randomization events
@@ -151,7 +156,8 @@ class ManagerBasedEnv:
         # play the simulator to activate physics handles
         # note: this activates the physics simulation view that exposes TensorAPIs
         # note: when started in extension mode, first call sim.reset_async() and then initialize the managers
-        if builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False:
+        # note (mt-isaac): sim reset for multi-task envs is handled by the multi-env class, once all the environments have been created
+        if (builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False) and (self.sim is None):
             print("[INFO]: Starting the simulation. This may take a few seconds. Please wait...")
             with Timer("[INFO]: Time taken for simulation start", "simulation_start"):
                 self.sim.reset()
@@ -165,7 +171,8 @@ class ManagerBasedEnv:
         # extend UI elements
         # we need to do this here after all the managers are initialized
         # this is because they dictate the sensors and commands right now
-        if self.sim.has_gui() and self.cfg.ui_window_class_type is not None:
+        # note (mt-isaac): handled by multi-env class
+        if self.sim.has_gui() and self.cfg.ui_window_class_type is not None and (sim is None):
             # setup live visualizers
             self.setup_manager_visualizers()
             self._window = self.cfg.ui_window_class_type(self, window_name="IsaacLab")

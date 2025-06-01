@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+import numpy as np
 import torch
 from collections.abc import Sequence
 from typing import Any
@@ -133,14 +134,17 @@ class InteractiveScene:
         # this triggers per-object level cloning in the spawner.
         if not self.cfg.replicate_physics:
             # clone the env xform
+            position_offsets = np.array(self.cfg.pos_offset).reshape(1, 3).repeat(self.cfg.num_envs, axis=0)
             env_origins = self.cloner.clone(
                 source_prim_path=self.env_prim_paths[0],
+                position_offsets=position_offsets,
                 prim_paths=self.env_prim_paths,
                 replicate_physics=False,
                 copy_from_source=True,
                 enable_env_ids=self.cfg.filter_collisions,  # this won't do anything because we are not replicating physics
             )
-            self._default_env_origins = torch.tensor(env_origins, device=self.device, dtype=torch.float32)
+            self._default_env_origins = torch.from_numpy(np.stack(env_origins)).to(self.device).float()
+            # self._default_env_origins = torch.tensor(env_origins, device=self.device, dtype=torch.float32)
         else:
             # otherwise, environment origins will be initialized during cloning at the end of environment creation
             self._default_env_origins = None
@@ -232,7 +236,7 @@ class InteractiveScene:
         # filter collisions within each environment instance
         self.cloner.filter_collisions(
             self.physics_scene_path,
-            "/World/collisions",
+            f"/World/collisions_{self.cfg.env_prefix}",
             self.env_prim_paths,
             global_paths=self._global_prim_paths,
         )
@@ -250,6 +254,11 @@ class InteractiveScene:
     """
     Properties.
     """
+    
+    @property
+    def global_prim_paths(self) -> list[str]:
+        """A list of global prim paths to enable collisions with."""
+        return self._global_prim_paths
 
     @property
     def physics_scene_path(self) -> str:
@@ -276,12 +285,12 @@ class InteractiveScene:
 
     @property
     def env_ns(self) -> str:
-        """The namespace ``/World/envs`` in which all environments created.
+        """The namespace ``/World/[prefix]_envs`` in which all environments created.
 
         The environments are present w.r.t. this namespace under "env_{N}" prim,
         where N is a natural number.
         """
-        return "/World/envs"
+        return f"/World/{self.cfg.env_prefix}_envs"
 
     @property
     def env_regex_ns(self) -> str:
