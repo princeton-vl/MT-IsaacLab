@@ -8,16 +8,20 @@ from isaaclab.sim import SimulationCfg
 
 from isaacsim.core.cloner import Cloner
 from isaaclab.utils.timer import Timer
-from .utils.mtrl import get_environment_position_offsets, wrap_observation_space, \
-    concatenate_observations, wrap_info
+from .utils.mtrl import (
+    get_environment_position_offsets,
+    wrap_observation_space,
+    concatenate_observations,
+    wrap_info,
+)
 from .manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
 from .manager_based_mt_rl_env_cfg import TaskConfigs, MultiTaskRLEnvConfig
-from typing import Dict, Union, List, Sequence
+from typing import Dict, Union, List, Sequence, Any
 from .ui import ViewportCameraController
 import isaacsim.core.utils.torch as torch_utils
 
 
-class MultiEnv(gym.Env):
+class ManagerBasedMTRLEnv(gym.Env):
 
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 30}
 
@@ -40,7 +44,7 @@ class MultiEnv(gym.Env):
         self.sim: SimulationContext = SimulationContext(sim_cfg)
         self._sim_step_counter = 0  
         
-        self.sim.set_camera_view(cfg.camera_eye_position, cfg.camera_target_position)
+        self.sim.set_camera_view(cfg.viewer.eye, cfg.viewer.lookat)
         self.task_configs = self.extract_tasks()
 
         env_position_offsets = get_environment_position_offsets(
@@ -55,7 +59,15 @@ class MultiEnv(gym.Env):
 
         for task_idx, (task_name, task_cfg) in enumerate(self.task_configs.items()):
             
-            rl_env_cfg = ManagerBasedRLEnvCfg(**(self.cfg.base_dataclass_fields), **(task_cfg.__dict__))
+            rl_env_cfg = ManagerBasedRLEnvCfg(**(self.cfg.base_dataclass_fields()), **(task_cfg.__dict__))
+            
+            # filter out the common scene elements, such as ground, etc, which belong to
+            if task_idx > 0:
+                world_elements = [attr for attr in rl_env_cfg.scene.__dict__.keys() if attr.startswith("world_")]
+                for attr in world_elements:
+                    delattr(rl_env_cfg.scene, attr)
+
+            
             rl_env_cfg.scene.env_prefix = task_name
             rl_env_cfg.scene.pos_offset = env_position_offsets[task_idx].tolist()
             rl_env_cfg.scene.num_envs = cfg.num_envs_per_task
@@ -161,7 +173,7 @@ class MultiEnv(gym.Env):
 
     @property
     def device(self):
-        return self.sim.device
+        return self.sim.cfg.device
 
     @property
     def physics_dt(self) -> float:
@@ -169,7 +181,7 @@ class MultiEnv(gym.Env):
 
         This is the lowest time-decimation at which the simulation is happening.
         """
-        return self.sim.dt
+        return self.sim.cfg.dt
 
     @property
     def step_dt(self) -> float:
@@ -177,7 +189,7 @@ class MultiEnv(gym.Env):
 
         This is the time-step at which the environment steps forward.
         """
-        return self.sim.dt * self.cfg.decimation
+        return self.sim.cfg.dt * self.cfg.decimation
 
     @property
     def max_episode_length_s(self):
@@ -191,7 +203,6 @@ class MultiEnv(gym.Env):
         """Step all the task environments with the given action."""
 
         if not isinstance(action, list):
-            
             action_dim = sum(self.example_env.action_manager.action_term_dim)
             action = action.view(self.cfg.num_multi_task_envs, self.cfg.num_envs_per_task, action_dim)
 

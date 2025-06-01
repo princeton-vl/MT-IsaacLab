@@ -53,11 +53,6 @@ class MultiTaskRLEnvConfig:
 
     xr: XrCfg | None = None
     """Configuration for viewing and interacting with the environment through an XR device."""
-
-
-    # Camera configuration
-    camera_eye_position = (0.0, 0.5, 1.0)
-    camera_target_position = (0.0, 0.0, 0.5)
     
     # Number of different multi-task environments
     num_multi_task_envs = 1
@@ -77,9 +72,7 @@ class MultiTaskRLEnvConfig:
     """If True, concatenates the observations, rewards, terminated, and timeouts from all environments.
        Otherwise, `step` returns a dict of observations, and others concatenated on a new axis.
     """
-    
-    
-    @property
+        
     def base_dataclass_fields(self) -> dict:
         """Return the basic data fields in common with ManagerBasedEnvCfg."""
         return {

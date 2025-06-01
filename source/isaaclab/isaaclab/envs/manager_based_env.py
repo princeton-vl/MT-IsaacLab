@@ -157,7 +157,7 @@ class ManagerBasedEnv:
         # note: this activates the physics simulation view that exposes TensorAPIs
         # note: when started in extension mode, first call sim.reset_async() and then initialize the managers
         # note (mt-isaac): sim reset for multi-task envs is handled by the multi-env class, once all the environments have been created
-        if (builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False) and (self.sim is None):
+        if (builtins.ISAAC_LAUNCHED_FROM_TERMINAL is False) and (sim is None):
             print("[INFO]: Starting the simulation. This may take a few seconds. Please wait...")
             with Timer("[INFO]: Time taken for simulation start", "simulation_start"):
                 self.sim.reset()
