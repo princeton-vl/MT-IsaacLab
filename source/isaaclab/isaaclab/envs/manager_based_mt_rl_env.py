@@ -53,8 +53,7 @@ class ManagerBasedMTRLEnv(gym.Env):
             clone_spacing=cfg.envs_spacing,
             environment_spacing= cfg.task_spacing,
         )
-
-        # task_prim_paths = []
+        
         env_prim_paths = []
 
         for task_idx, (task_name, task_cfg) in enumerate(self.task_configs.items()):

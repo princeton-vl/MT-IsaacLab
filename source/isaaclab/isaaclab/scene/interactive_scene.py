@@ -143,8 +143,7 @@ class InteractiveScene:
                 copy_from_source=True,
                 enable_env_ids=self.cfg.filter_collisions,  # this won't do anything because we are not replicating physics
             )
-            self._default_env_origins = torch.from_numpy(np.stack(env_origins)).to(self.device).float()
-            # self._default_env_origins = torch.tensor(env_origins, device=self.device, dtype=torch.float32)
+            self._default_env_origins = torch.tensor(env_origins, device=self.device, dtype=torch.float32)
         else:
             # otherwise, environment origins will be initialized during cloning at the end of environment creation
             self._default_env_origins = None
@@ -191,9 +190,12 @@ class InteractiveScene:
                 " This may adversely affect PhysX parsing. We recommend disabling this property."
             )
 
+        position_offsets = np.array(self.cfg.pos_offset).reshape(1, 3).repeat(self.cfg.num_envs, axis=0)
+
         # clone the environment
         env_origins = self.cloner.clone(
             source_prim_path=self.env_prim_paths[0],
+            position_offsets=position_offsets,
             prim_paths=self.env_prim_paths,
             replicate_physics=self.cfg.replicate_physics,
             copy_from_source=copy_from_source,
