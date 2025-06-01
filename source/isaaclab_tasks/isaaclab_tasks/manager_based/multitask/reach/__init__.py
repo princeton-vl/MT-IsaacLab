@@ -3,4 +3,4 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-"""Fixed-arm environments with end-effector pose tracking commands."""
+"""Multi-task Environment Examples with end-effector pose tracking commands."""

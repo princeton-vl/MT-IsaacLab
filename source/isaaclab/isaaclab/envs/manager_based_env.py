@@ -69,7 +69,7 @@ class ManagerBasedEnv:
 
         Args:
             cfg: The configuration object for the environment.
-            sim: The simulation context to use for the environment. Provide this only for multi-environment setups, 
+            sim: The simulation context to use for the environment. Provide this only for multi-environment setups,
                 where all environments share the same simulation context.
 
         Raises:

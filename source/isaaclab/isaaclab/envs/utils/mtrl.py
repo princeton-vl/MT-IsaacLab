@@ -1,13 +1,23 @@
-import numpy as np
-from typing import Tuple, List
-from gymnasium.error import CustomSpaceError
-import torch
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Copyright (c) 2022-2025, Author: Meenal Parakh
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 import gymnasium as gym
+import numpy as np
+import torch
+from gymnasium.error import CustomSpaceError
+
 
 def compute_grid_center_offset(
-    square_dimensions: Tuple[float, float],
-    grid_shape: Tuple[int, int],
-    spacing: Tuple[float, float],
+    square_dimensions: tuple[float, float],
+    grid_shape: tuple[int, int],
+    spacing: tuple[float, float],
 ) -> np.ndarray:
     """
     Compute the offset required to center a grid of squares at the origin.
@@ -34,10 +44,10 @@ def compute_grid_center_offset(
 
 
 def generate_centered_grid_positions(
-    square_dimensions: Tuple[float, float],
+    square_dimensions: tuple[float, float],
     total_squares: int,
-    spacing: Tuple[float, float],
-) -> List[np.ndarray]:
+    spacing: tuple[float, float],
+) -> list[np.ndarray]:
     """
     Generate positions for placing squares in a grid centered at the origin.
 
@@ -55,7 +65,7 @@ def generate_centered_grid_positions(
 
     offset = compute_grid_center_offset(square_dimensions, grid_shape, spacing)
 
-    centers: List[np.ndarray] = []
+    centers: list[np.ndarray] = []
 
     for row in range(rows):
         for col in range(cols):
@@ -69,11 +79,8 @@ def generate_centered_grid_positions(
 
 
 def get_environment_position_offsets(
-    num_clones_per_env: int,
-    num_environments: int,
-    clone_spacing: float,
-    environment_spacing: float = 5.0
-) -> List[np.ndarray]:
+    num_clones_per_env: int, num_environments: int, clone_spacing: float, environment_spacing: float = 5.0
+) -> list[np.ndarray]:
     """
     Compute center positions for placing multiple environment instances in a grid.
 
@@ -101,7 +108,7 @@ def get_environment_position_offsets(
     environment_positions = generate_centered_grid_positions(
         square_dimensions=(grid_width, grid_height),
         total_squares=num_environments,
-        spacing=(environment_spacing, environment_spacing)
+        spacing=(environment_spacing, environment_spacing),
     )
 
     return environment_positions
@@ -117,11 +124,10 @@ class ObservationDict(dict):
         for k in self.keys():
             self[k].copy_(other[k])
         return self
-    
+
     @property
     def shape(self):
-        return 
-    
+        return
 
 
 def wrap_observation_space(observation_space, addon_space):
@@ -163,12 +169,10 @@ def wrap_observation_space(observation_space, addon_space):
             return gym.spaces.Dict(merged_spaces)
     else:
         # Wrap the original space and addon_space into a new Dict under "policy"
-        return gym.spaces.Dict(
-            spaces={"observation": observation_space, **addon_space.spaces}
-        )
-    
-    
-def concatenate_observations(obs_list: List):
+        return gym.spaces.Dict(spaces={"observation": observation_space, **addon_space.spaces})
+
+
+def concatenate_observations(obs_list: list):
     # If all observations are dictionaries, concatenate them key by key.
     # Handle recursive dictionaries.
     if not obs_list:

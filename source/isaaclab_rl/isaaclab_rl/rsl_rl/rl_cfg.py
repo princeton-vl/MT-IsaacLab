@@ -197,3 +197,6 @@ class RslRlOnPolicyRunnerCfg:
 
     If regex expression, the latest (alphabetical order) matching file will be loaded.
     """
+
+    init_at_random_ep_len: bool = True
+    """Whether to initialize the environment at a random episode length. Default is True."""

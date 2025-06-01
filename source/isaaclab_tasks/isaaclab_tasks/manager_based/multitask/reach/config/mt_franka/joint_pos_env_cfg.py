@@ -8,25 +8,17 @@ import math
 from isaaclab.utils import configclass
 
 import isaaclab_tasks.manager_based.manipulation.reach.mdp as mdp
-from isaaclab_tasks.manager_based.manipulation.reach.reach_env_cfg import ReachEnvCfg
+from isaaclab_tasks.manager_based.multitask.reach.reach_env_cfg import ReachEnvCfg
+from isaaclab.envs import ManagerBasedMTRLEnvCfg, TaskConfigs
 
 ##
 # Pre-defined configs
 ##
 from isaaclab_assets import FRANKA_PANDA_CFG  # isort: skip
 
-
-##
-# Environment configuration
-##
-
-
 @configclass
 class FrankaReachEnvCfg(ReachEnvCfg):
     def __post_init__(self):
-        # post init of parent
-        super().__post_init__()
-
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # override rewards
@@ -43,14 +35,29 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         self.commands.ee_pose.body_name = "panda_hand"
         self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
 
-
+##
+# Environment configuration
+##
 @configclass
-class FrankaReachEnvCfg_PLAY(FrankaReachEnvCfg):
+class MTReachEnvCfg_Homogeneous(ManagerBasedMTRLEnvCfg):
+    """Configuration for the reach end-effector pose tracking environment."""
+
+    franka1: TaskConfigs = FrankaReachEnvCfg()
+    franka2: TaskConfigs = FrankaReachEnvCfg()
+
     def __post_init__(self):
-        # post init of parent
-        super().__post_init__()
-        # make a smaller scene for play
-        self.scene.num_envs = 50
-        self.scene.env_spacing = 2.5
-        # disable randomization for play
-        self.observations.policy.enable_corruption = False
+        """Post initialization."""
+        # general settings
+        self.decimation = 2
+        self.num_multi_task_envs = 2
+        self.task_spacing = 5.0
+        self.num_envs_per_task = 128
+        self.envs_spacing = 2.5
+        self.append_task_id = False
+        self.concatenate_step_results = True
+
+        self.sim.render_interval = self.decimation
+        self.episode_length_s = 12.0
+        self.viewer.eye = (3.5, 3.5, 3.5)
+        # simulation settings
+        self.sim.dt = 1.0 / 60.0

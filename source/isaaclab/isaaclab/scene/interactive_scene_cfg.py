@@ -76,10 +76,10 @@ class InteractiveSceneCfg:
     This is the default distance between environment origins in the scene. Used only when the
     number of environments is greater than one.
     """
-    
+
     env_prefix: str = "default"
     """Prefix for environment instances in multi-task setups"""
-    
+
     pos_offset: tuple[float, float, float] = (0.0, 0.0, 0.0)
     """Position offset for the environment instances, necessary for multi-task setups."""
 

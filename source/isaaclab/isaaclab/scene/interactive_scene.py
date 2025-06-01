@@ -256,7 +256,7 @@ class InteractiveScene:
     """
     Properties.
     """
-    
+
     @property
     def global_prim_paths(self) -> list[str]:
         """A list of global prim paths to enable collisions with."""

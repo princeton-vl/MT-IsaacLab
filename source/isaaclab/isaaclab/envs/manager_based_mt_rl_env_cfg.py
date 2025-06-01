@@ -1,31 +1,37 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
 
-from .ui import ManagerBasedRLEnvWindow
 from dataclasses import MISSING
 
-from isaaclab.sim import SimulationCfg
-from .common import ViewerCfg
 from isaaclab.devices.openxr import XrCfg
-
-from isaaclab.utils.configclass import configclass
 from isaaclab.managers import RecorderManagerBaseCfg as DefaultEmptyRecorderManagerCfg
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sim import SimulationCfg
+from isaaclab.utils.configclass import configclass
+
+from .common import ViewerCfg
 from .manager_based_env_cfg import DefaultEventManagerCfg
+from .ui import ManagerBasedRLEnvWindow
+
 
 def wrap_info(info, env_name):
     info["env_name"] = env_name
     return info
 
+
 # common settings
 @configclass
-class MultiTaskRLEnvConfig:
-    
+class ManagerBasedMTRLEnvCfg:
+
     # simulation settings
     viewer: ViewerCfg = ViewerCfg()
     """Viewer configuration. Default is ViewerCfg()."""
 
     sim: SimulationCfg = SimulationCfg()
     """Physics simulation configuration. Default is SimulationCfg()."""
-    
+
     decimation: int = MISSING
     """Number of control action updates @ sim dt per policy dt.
 
@@ -35,6 +41,8 @@ class MultiTaskRLEnvConfig:
     # ui settings
     ui_window_class_type: type | None = ManagerBasedRLEnvWindow
 
+    is_finite_horizon: bool = False
+    """See ManagerBasedRLEnvCfg.is_finite_horizon for more details."""
 
     rerender_on_reset: bool = False
     """Whether a render step is performed again after at least one environment has been reset.
@@ -53,7 +61,7 @@ class MultiTaskRLEnvConfig:
 
     xr: XrCfg | None = None
     """Configuration for viewing and interacting with the environment through an XR device."""
-    
+
     # Number of different multi-task environments
     num_multi_task_envs = 1
     task_spacing = 10.0
@@ -61,18 +69,18 @@ class MultiTaskRLEnvConfig:
     # Environment configuration
     num_envs_per_task = 2
     envs_spacing = 5.0
-    
-    # Observation 
+
+    # Observation
     append_task_id: bool = False
     """If True, appends the task ID to the observation space.
        Otherwise, the task ID can also be explicitly provided through the observations in each environment.
     """
-    
-    concatenate_step_results: bool = True  
+
+    concatenate_step_results: bool = True
     """If True, concatenates the observations, rewards, terminated, and timeouts from all environments.
        Otherwise, `step` returns a dict of observations, and others concatenated on a new axis.
     """
-        
+
     def base_dataclass_fields(self) -> dict:
         """Return the basic data fields in common with ManagerBasedEnvCfg."""
         return {
@@ -84,8 +92,8 @@ class MultiTaskRLEnvConfig:
             "wait_for_textures": self.wait_for_textures,
             "xr": self.xr,
         }
-    
-    
+
+
 @configclass
 class TaskConfigs:
     # environment settings

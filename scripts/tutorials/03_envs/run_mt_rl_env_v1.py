@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """
 This script demonstrates how to run the RL environment for the multi-task RL env.
 
@@ -14,12 +19,8 @@ import argparse
 from isaaclab.app import AppLauncher
 
 # add argparse arguments
-parser = argparse.ArgumentParser(
-    description="Tutorial on running the cartpole RL environment."
-)
-parser.add_argument(
-    "--num_envs", type=int, default=16, help="Number of environments to spawn."
-)
+parser = argparse.ArgumentParser(description="Tutorial on running the cartpole RL environment.")
+parser.add_argument("--num_envs", type=int, default=16, help="Number of environments to spawn.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -34,7 +35,7 @@ simulation_app = app_launcher.app
 
 import torch
 
-from isaaclab.envs import ManagerBasedRLEnv, ManagerBasedMTRLEnv
+from isaaclab.envs import ManagerBasedMTRLEnv
 
 from isaaclab_tasks.manager_based.multitask.reach.reach_env_cfg import MTReachEnvCfg_Homogeneous as MTReachEnvCfg
 
@@ -63,7 +64,7 @@ def main():
             for task_env in env.envs.values():
                 joint_efforts = torch.randn_like(task_env.action_manager.action)
                 actions.append(joint_efforts)
-                
+
             actions = torch.cat(actions, dim=0)  # concatenate actions for all tasks
             # step the environment
             obs, rew, terminated, truncated, info = env.step(actions)
@@ -71,9 +72,9 @@ def main():
 
             if count % 100 == 0:
                 print(f"[INFO]: Current observations (step {count}):")
-                obs_MND = obs['policy'].view(env.cfg.num_multi_task_envs, env.cfg.num_envs_per_task, -1)
+                obs_MND = obs["policy"].view(env.cfg.num_multi_task_envs, env.cfg.num_envs_per_task, -1)
                 for idx in range(env.cfg.num_multi_task_envs):
-                    task_name = info[idx]['task_name']
+                    task_name = info[idx]["task_name"]
                     task_obs = obs_MND[idx]
                     print(f"\t[Env {task_name}]: {task_obs[0][0].item()}")
 

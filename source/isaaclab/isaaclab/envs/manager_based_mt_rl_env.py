@@ -1,24 +1,32 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Copyright (c) 2022-2025, Author: Meenal Parakh
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+# Reference: source/isaaclab/isaaclab/envs/manager_based_rl_env.py
+
 import gymnasium as gym
-from .manager_based_rl_env import ManagerBasedRLEnv
 import numpy as np
 import torch
+from collections.abc import Sequence
+from typing import Any
 
-from isaaclab.sim import SimulationContext
-from isaaclab.sim import SimulationCfg
-
-from isaacsim.core.cloner import Cloner
-from isaaclab.utils.timer import Timer
-from .utils.mtrl import (
-    get_environment_position_offsets,
-    wrap_observation_space,
-    concatenate_observations,
-    wrap_info,
-)
-from .manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
-from .manager_based_mt_rl_env_cfg import TaskConfigs, MultiTaskRLEnvConfig
-from typing import Dict, Union, List, Sequence, Any
-from .ui import ViewportCameraController
 import isaacsim.core.utils.torch as torch_utils
+from isaacsim.core.cloner import Cloner
+
+from isaaclab.sim import SimulationCfg, SimulationContext
+from isaaclab.utils.timer import Timer
+
+from .manager_based_mt_rl_env_cfg import ManagerBasedMTRLEnvCfg, TaskConfigs
+from .manager_based_rl_env import ManagerBasedRLEnv
+from .manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
+from .ui import ViewportCameraController
+from .utils.mtrl import concatenate_observations, get_environment_position_offsets, wrap_observation_space
 
 
 class ManagerBasedMTRLEnv(gym.Env):
@@ -27,23 +35,24 @@ class ManagerBasedMTRLEnv(gym.Env):
 
     def __init__(
         self,
-        cfg: MultiTaskRLEnvConfig,
+        cfg: ManagerBasedMTRLEnvCfg,
         is_vector_env: bool = True,
         device="cuda:0",
         render_mode=None,
+        **kwargs,
     ):
         self.is_vector_env = is_vector_env
 
         self.cfg = cfg
 
-        self.envs: Dict[str, ManagerBasedRLEnv] = {}
+        self.envs: dict[str, ManagerBasedRLEnv] = {}
 
         sim_cfg = SimulationCfg()
         sim_cfg.device = device
 
         self.sim: SimulationContext = SimulationContext(sim_cfg)
-        self._sim_step_counter = 0  
-        
+        self._sim_step_counter = 0
+
         self.sim.set_camera_view(cfg.viewer.eye, cfg.viewer.lookat)
         self.task_configs = self.extract_tasks()
 
@@ -51,38 +60,34 @@ class ManagerBasedMTRLEnv(gym.Env):
             num_clones_per_env=cfg.num_envs_per_task,
             num_environments=len(self.task_configs),
             clone_spacing=cfg.envs_spacing,
-            environment_spacing= cfg.task_spacing,
+            environment_spacing=cfg.task_spacing,
         )
-        
+
         env_prim_paths = []
 
         for task_idx, (task_name, task_cfg) in enumerate(self.task_configs.items()):
-            
+
             rl_env_cfg = ManagerBasedRLEnvCfg(**(self.cfg.base_dataclass_fields()), **(task_cfg.__dict__))
-            
+
             # filter out the common scene elements, such as ground, etc, which belong to
             if task_idx > 0:
                 world_elements = [attr for attr in rl_env_cfg.scene.__dict__.keys() if attr.startswith("world_")]
                 for attr in world_elements:
                     delattr(rl_env_cfg.scene, attr)
 
-            
             rl_env_cfg.scene.env_prefix = task_name
             rl_env_cfg.scene.pos_offset = env_position_offsets[task_idx].tolist()
             rl_env_cfg.scene.num_envs = cfg.num_envs_per_task
             rl_env_cfg.scene.env_spacing = cfg.envs_spacing
-            
+
             # note (mt-isaac): collision filtering is handled outside the loop
             rl_env_cfg.scene.filter_collisions = False
-            self.envs[task_name] = ManagerBasedRLEnv(
-                rl_env_cfg, sim=self.sim, render_mode=render_mode
-            )
+            self.envs[task_name] = ManagerBasedRLEnv(rl_env_cfg, sim=self.sim, render_mode=render_mode)
 
             env_prim_paths.extend(self.envs[task_name].scene.env_prim_paths)
 
-
         example_env = list(self.envs.values())[0]
-        self.example_env = example_env  
+        self.example_env = example_env
 
         # remove global collisions between the tasks and environments within tasks
         cloner = Cloner()
@@ -102,14 +107,11 @@ class ManagerBasedMTRLEnv(gym.Env):
         else:
             self.viewport_camera_controller = None
 
-
         # start the sim
-        print(
-            "[INFO]: Starting the simulation. This may take a few seconds. Please wait..."
-        )
+        print("[INFO]: Starting the simulation. This may take a few seconds. Please wait...")
         with Timer("[INFO]: Time taken for simulation start"):
             self.sim.reset()
-            
+
         for task_name, env in self.envs.items():
             # add timeline event to load managers
             print(f"[INFO]: Loading environment {task_name}...")
@@ -118,13 +120,11 @@ class ManagerBasedMTRLEnv(gym.Env):
             print(f"[INFO]: Environment {env.scene.env_ns} loaded.")
 
         # ui_window_class_type = ManagerBasedRLEnvWindow
-        # FIXME: currently provides visualization only for the first environment. 
+        # FIXME: currently provides visualization only for the first environment.
         # Potentially requires a multi-task version of BaseEnvWindow class.
         if self.sim.has_gui() and self.cfg.ui_window_class_type is not None:
             example_env.setup_manager_visualizers()
-            example_env._window = self.cfg.ui_window_class_type(
-                example_env, window_name="IsaacLab"
-            )
+            example_env._window = self.cfg.ui_window_class_type(example_env, window_name="IsaacLab")
 
         self.set_observation_action_spaces()
         self.render_mode = render_mode
@@ -137,21 +137,24 @@ class ManagerBasedMTRLEnv(gym.Env):
         return task_configs
 
     def set_observation_action_spaces(self):
-        
+
         # two possibilities exist:
         # 1. the envs allow for a common observation and action space.
         # 2. the envs have different observation and action spaces.
-        
-        # note (mt-isaac): Approach 1 is efficient for batch processing and downstream processing. 
-        # note (mt-isaac): we provide multi-task env for both cases, but downstream processing 
+
+        # note (mt-isaac): Approach 1 is efficient for batch processing and downstream processing.
+        # note (mt-isaac): we provide multi-task env for both cases, but downstream processing
         # (with RL algorithms) is only supported for (1). Hence, we do not need to handle (2) here.
 
-        
-        # observation space here accounts for the number of paralle environments per task
-        self.observation_space = self.example_env.observation_space  
+        # observation space here accounts for the number of parallel environments per task
+        self.observation_space = self.example_env.observation_space
         self.action_space = self.example_env.action_space
-                       
+
         if self.cfg.append_task_id:
+            raise NotImplementedError(
+                "Appending task ID to the observation space is not implemented yet. "
+                "Please set `append_task_id` to False in the environment configuration."
+            )
             self.observation_space = wrap_observation_space(
                 self.observation_space,
                 addon_space=gym.spaces.Dict(
@@ -166,9 +169,13 @@ class ManagerBasedMTRLEnv(gym.Env):
                 ),
             )
 
+        self.single_observation_space = self.example_env.single_observation_space
+        self.single_action_space = self.example_env.single_action_space
+
     @property
     def num_envs(self) -> int:
-        return self.cfg.num_envs_per_task
+        """Returns the total number of environments across all tasks."""
+        return self.cfg.num_envs_per_task * self.cfg.num_multi_task_envs
 
     @property
     def device(self):
@@ -198,7 +205,7 @@ class ManagerBasedMTRLEnv(gym.Env):
     def max_episode_length(self):
         return max([env.max_episode_length for env in self.envs.values()])
 
-    def step(self, action: Union[torch.Tensor, List[torch.Tensor]]):  # -> VecEnvStepReturn:
+    def step(self, action: torch.Tensor | list[torch.Tensor]):  # -> VecEnvStepReturn:
         """Step all the task environments with the given action."""
 
         if not isinstance(action, list):
@@ -211,7 +218,7 @@ class ManagerBasedMTRLEnv(gym.Env):
 
         is_rendering = self.sim.has_gui() or self.sim.has_rtx_sensors()
 
-        # apply the 
+        # apply the
         for _ in range(self.cfg.decimation):
 
             self._sim_step_counter += 1
@@ -231,8 +238,8 @@ class ManagerBasedMTRLEnv(gym.Env):
                 env.scene.update(dt=self.physics_dt)
 
         # post-step:
-        
-        is_reset = False        
+
+        is_reset = False
         for task_idx, (task_name, task_env) in enumerate(self.envs.items()):
             task_env.curriculum_manager.compute(env_ids=None)
 
@@ -245,15 +252,15 @@ class ManagerBasedMTRLEnv(gym.Env):
             # -- reward computation
             task_env.reward_buf = task_env.reward_manager.compute(dt=self.step_dt)
             # -- reset envs that terminated/timed-out and log the episode information
-            
+
             reset_env_ids = task_env.reset_buf.nonzero(as_tuple=False).squeeze(-1)
             if len(reset_env_ids) > 0:
                 task_env._reset_idx(reset_env_ids)
                 # -- update command
                 task_env.scene.write_data_to_sim()
-            
+
             is_reset = is_reset or (len(reset_env_ids) > 0)
-                
+
             # -- update command
             task_env.command_manager.compute(dt=self.step_dt)
             # -- step interval events
@@ -262,42 +269,35 @@ class ManagerBasedMTRLEnv(gym.Env):
             # -- compute observations
             # note: done after reset to get the correct observations for reset envs
             task_env.obs_buf = task_env.observation_manager.compute()
-            
+
         if is_reset:
             self.sim.forward()
             if self.sim.has_rtx_sensors() and self.cfg.rerender_on_reset:
                 self.sim.render()
-                
+
         # concatenate the observations, rewards, resets and extras
-        
+
         reward_buf = [task_env.reward_buf for task_env in self.envs.values()]
-        reset_terminated = [
-            task_env.reset_terminated for task_env in self.envs.values()
-        ]
-        reset_time_outs = [
-            task_env.reset_time_outs for task_env in self.envs.values()
-        ]
-        extras = [
-            wrap_info(task_env.extras, task_name)
-            for task_name, task_env in self.envs.items()
-        ]
-        
-        obs_buf = {task_name: task_env.obs_buf for task_name, task_env in self.envs.items()}    
-        
+        reset_terminated = [task_env.reset_terminated for task_env in self.envs.values()]
+        reset_time_outs = [task_env.reset_time_outs for task_env in self.envs.values()]
+        extras = {task_name: task_env.extras for task_name, task_env in self.envs.items()}
+
+        obs_buf = {task_name: task_env.obs_buf for task_name, task_env in self.envs.items()}
+
         if self.cfg.concatenate_step_results:
             # assumes that all environments have the same observation space
             self.reward_buf = torch.cat(reward_buf, dim=0)
             self.reset_terminated = torch.cat(reset_terminated, dim=0)
             self.reset_time_outs = torch.cat(reset_time_outs, dim=0)
-                    
+
             self.obs_buf = concatenate_observations(list(obs_buf.values()))
-            
+
         else:
             self.reward_buf = torch.stack(reward_buf, dim=0)
             self.reset_terminated = torch.stack(reset_terminated, dim=0)
             self.reset_time_outs = torch.stack(reset_time_outs, dim=0)
             self.obs_buf = obs_buf
-                        
+
         return (
             self.obs_buf,
             self.reward_buf,
@@ -305,7 +305,6 @@ class ManagerBasedMTRLEnv(gym.Env):
             self.reset_time_outs,
             extras,
         )
-        
 
     def _reset_idx(self, task_name, env_ids: Sequence[int]):
         """Reset environments based on specified indices.
@@ -375,10 +374,10 @@ class ManagerBasedMTRLEnv(gym.Env):
             pass
         # set seed for torch and other libraries
         return torch_utils.set_seed(seed)
-        
+
     def reset(
         self, seed: int | None = None, env_ids: list[Sequence[int]] | None = None, options: dict[str, Any] | None = None
-    ):        
+    ):
         """Resets the specified environments and returns observations.
 
         This function calls the :meth:`_reset_idx` function to reset the specified environments.
@@ -398,38 +397,38 @@ class ManagerBasedMTRLEnv(gym.Env):
         """
         if env_ids is None:
             env_ids = [None] * len(self.envs)
-            
+
         for idx in range(len(self.envs)):
             if env_ids[idx] is None:
                 env_ids[idx] = torch.arange(self.cfg.num_envs_per_task, dtype=torch.int64, device=self.device)
-        
+
         if seed is not None:
             self.seed(seed)
-            
+
         for task_idx, (task_name, task_env) in enumerate(self.envs.items()):
             self._reset_idx(task_name=task_name, env_ids=env_ids[task_idx])
             task_env.scene.write_data_to_sim()
-            
+
         self.sim.forward()
-        
+
         self.obs_buf = {}
-        for task_name, task_env in self.envs.items():   
+        for task_name, task_env in self.envs.items():
             task_env.obs_buf = task_env.observation_manager.compute()
             self.obs_buf[task_name] = task_env.obs_buf
-            
+
         if self.cfg.concatenate_step_results:
             # concatenate the observations
             self.obs_buf = concatenate_observations(list(self.obs_buf.values()))
-            
-        infos_list = [wrap_info(task_env.extras, task_name) for task_name, task_env in self.envs.items()]
-        
-        return self.obs_buf, infos_list
+
+        infos_dict = {task_name: task_env.extras for task_name, task_env in self.envs.items()}
+
+        return self.obs_buf, infos_dict
 
     def close(self):
         for env in self.envs.values():
             env.close()
 
-    def render(self, recompute=False):        
+    def render(self, recompute=False):
         # run a rendering step of the simulator
         # if we have rtx sensors, we do not need to render again sin
         if not self.sim.has_rtx_sensors() and not recompute:
@@ -471,4 +470,16 @@ class ManagerBasedMTRLEnv(gym.Env):
         else:
             raise NotImplementedError(
                 f"Render mode '{self.render_mode}' is not supported. Please use: {self.metadata['render_modes']}."
-            )        
+            )
+
+    def _get_observations(self):
+        """Returns the current observations of the environment."""
+
+        obs_dict = {}
+        for task_name, task_env in self.envs.items():
+            obs_dict[task_name] = task_env.observation_manager.compute()
+
+        if self.cfg.concatenate_step_results:
+            obs_dict = concatenate_observations(list(obs_dict.values()))
+
+        return obs_dict

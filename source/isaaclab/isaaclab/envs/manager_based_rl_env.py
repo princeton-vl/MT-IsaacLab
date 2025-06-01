@@ -65,12 +65,14 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
     cfg: ManagerBasedRLEnvCfg
     """Configuration for the environment."""
 
-    def __init__(self, cfg: ManagerBasedRLEnvCfg, sim: SimulationContext | None = None, render_mode: str | None = None, **kwargs):
+    def __init__(
+        self, cfg: ManagerBasedRLEnvCfg, sim: SimulationContext | None = None, render_mode: str | None = None, **kwargs
+    ):
         """Initialize the environment.
 
         Args:
             cfg: The configuration for the environment.
-            sim: The simulation context to use for the environment. Provide this only for multi-environment setups, 
+            sim: The simulation context to use for the environment. Provide this only for multi-environment setups,
                 where all environments share the same simulation context.
             render_mode: The render mode for the environment. Defaults to None, which
                 is similar to ``"human"``.
