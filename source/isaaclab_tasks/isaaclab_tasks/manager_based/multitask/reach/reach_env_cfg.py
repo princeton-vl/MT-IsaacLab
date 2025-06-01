@@ -59,7 +59,7 @@ class ReachSceneCfg(InteractiveSceneCfg):
         self.world_ground = AssetBaseCfg(
             prim_path="/World/defaultGroundPlane",
             spawn=ground_cfg,
-            init_state=AssetBaseCfg.InitialStateCfg(pos=(10.0, 0.0, 0.0)),
+            init_state=AssetBaseCfg.InitialStateCfg(pos=(10.0, 0.0, -1.05)),
             collision_group=-1,
         )
 
@@ -144,8 +144,33 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
 
 
+# dummy multi-task configuration (equivalent to a sinlge Franka reach task)
 @configclass
-class MTReachEnvCfg(MultiTaskRLEnvConfig):
+class MTReachEnvCfg_Homogeneous(MultiTaskRLEnvConfig):
+    """Configuration for the reach end-effector pose tracking environment."""
+
+    franka1: TaskConfigs = FrankaReachEnvCfg()
+    franka2: TaskConfigs = FrankaReachEnvCfg()
+
+    def __post_init__(self):
+        """Post initialization."""
+        # general settings
+        self.decimation = 2
+        self.num_multi_task_envs = 2
+        self.task_spacing = 5.0
+        self.num_envs_per_task = 128
+        self.envs_spacing = 2.5
+        self.append_task_id = True
+        self.concatenate_step_results = True
+        
+        self.sim.render_interval = self.decimation
+        self.episode_length_s = 12.0
+        self.viewer.eye = (3.5, 3.5, 3.5)
+        # simulation settings
+        self.sim.dt = 1.0 / 60.0
+
+@configclass
+class MTReachEnvCfg_Heterogeneous(MultiTaskRLEnvConfig):
     """Configuration for the reach end-effector pose tracking environment."""
 
     franka: TaskConfigs = FrankaReachEnvCfg()
@@ -157,7 +182,7 @@ class MTReachEnvCfg(MultiTaskRLEnvConfig):
         self.decimation = 2
         self.num_multi_task_envs = 2
         self.task_spacing = 5.0
-        self.num_envs_per_task = 128
+        self.num_envs_per_task = 64
         self.envs_spacing = 2.5
         self.append_task_id = True
         self.concatenate_step_results = False
@@ -167,4 +192,3 @@ class MTReachEnvCfg(MultiTaskRLEnvConfig):
         self.viewer.eye = (3.5, 3.5, 3.5)
         # simulation settings
         self.sim.dt = 1.0 / 60.0
-

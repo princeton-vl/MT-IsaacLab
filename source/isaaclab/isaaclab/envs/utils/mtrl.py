@@ -190,5 +190,5 @@ def concatenate_observations(obs_list: List):
 
 
 def wrap_info(info, env_name):
-    info["env_name"] = env_name
+    info["task_name"] = env_name
     return info
