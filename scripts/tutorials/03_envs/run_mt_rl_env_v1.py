@@ -73,8 +73,7 @@ def main():
             if count % 100 == 0:
                 print(f"[INFO]: Current observations (step {count}):")
                 obs_MND = obs["policy"].view(env.cfg.num_multi_task_envs, env.cfg.num_envs_per_task, -1)
-                for idx in range(env.cfg.num_multi_task_envs):
-                    task_name = info[idx]["task_name"]
+                for idx, task_name in enumerate(info):
                     task_obs = obs_MND[idx]
                     print(f"\t[Env {task_name}]: {task_obs[0][0].item()}")
 
