@@ -5,11 +5,11 @@
 
 import math
 
+from isaaclab.envs import ManagerBasedMTRLEnvCfg, TaskConfigs
 from isaaclab.utils import configclass
 
 import isaaclab_tasks.manager_based.manipulation.reach.mdp as mdp
 from isaaclab_tasks.manager_based.multitask.reach.reach_env_cfg import ReachEnvCfg
-from isaaclab.envs import ManagerBasedMTRLEnvCfg, TaskConfigs
 
 ##
 # Pre-defined configs
@@ -20,6 +20,7 @@ from isaaclab_assets import FRANKA_PANDA_CFG, UR10_CFG  # isort: skip
 ##
 # Environment configuration
 ##
+
 
 # copied from source/isaaclab_tasks/isaaclab_tasks/manager_based/manipulation/reach/config/ur_10/joint_pos_env_cfg.py
 @configclass
@@ -87,3 +88,4 @@ class MTReachEnvCfg_Heterogeneous(ManagerBasedMTRLEnvCfg):
         self.viewer.eye = (3.5, 3.5, 3.5)
         # simulation settings
         self.sim.dt = 1.0 / 60.0
+        self.seed = 42

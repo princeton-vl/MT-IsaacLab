@@ -345,7 +345,6 @@ class ManagerBase(ABC):
             raise AttributeError(f"The term '{term_name}' is not callable. Received: {term_cfg.func}")
 
         # check statically if the term's arguments are matched by params
-        # todo (mt-isaac): potentially causes conflict with certain terms. Check if this should be removed.
         term_params = list(term_cfg.params.keys())
         args = inspect.signature(func_static).parameters
         args_with_defaults = [arg for arg in args if args[arg].default is not inspect.Parameter.empty]

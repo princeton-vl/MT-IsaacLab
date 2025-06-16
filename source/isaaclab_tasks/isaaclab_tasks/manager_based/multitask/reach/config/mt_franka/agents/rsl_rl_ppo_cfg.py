@@ -17,7 +17,7 @@ class FrankaReachPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     run_name = ""
     resume = False
     empirical_normalization = False
-    init_at_random_ep_len = False      # not supported for MT environments
+    init_at_random_ep_len = False  # not supported for MT environments
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_hidden_dims=[64, 64],

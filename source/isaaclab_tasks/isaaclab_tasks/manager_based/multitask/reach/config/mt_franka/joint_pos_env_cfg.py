@@ -5,16 +5,17 @@
 
 import math
 
+from isaaclab.envs import ManagerBasedMTRLEnvCfg, TaskConfigs
 from isaaclab.utils import configclass
 
 import isaaclab_tasks.manager_based.manipulation.reach.mdp as mdp
 from isaaclab_tasks.manager_based.multitask.reach.reach_env_cfg import ReachEnvCfg
-from isaaclab.envs import ManagerBasedMTRLEnvCfg, TaskConfigs
 
 ##
 # Pre-defined configs
 ##
 from isaaclab_assets import FRANKA_PANDA_CFG  # isort: skip
+
 
 @configclass
 class FrankaReachEnvCfg(ReachEnvCfg):
@@ -34,6 +35,7 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         # end-effector is along z-direction
         self.commands.ee_pose.body_name = "panda_hand"
         self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
+
 
 ##
 # Environment configuration
@@ -61,3 +63,4 @@ class MTReachEnvCfg_Homogeneous(ManagerBasedMTRLEnvCfg):
         self.viewer.eye = (3.5, 3.5, 3.5)
         # simulation settings
         self.sim.dt = 1.0 / 60.0
+        self.seed = 42

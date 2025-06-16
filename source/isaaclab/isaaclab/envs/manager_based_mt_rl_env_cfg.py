@@ -32,6 +32,8 @@ class ManagerBasedMTRLEnvCfg:
     sim: SimulationCfg = SimulationCfg()
     """Physics simulation configuration. Default is SimulationCfg()."""
 
+    seed: int | None = None
+
     decimation: int = MISSING
     """Number of control action updates @ sim dt per policy dt.
 
@@ -91,6 +93,7 @@ class ManagerBasedMTRLEnvCfg:
             "rerender_on_reset": self.rerender_on_reset,
             "wait_for_textures": self.wait_for_textures,
             "xr": self.xr,
+            "seed": self.seed,
         }
 
 

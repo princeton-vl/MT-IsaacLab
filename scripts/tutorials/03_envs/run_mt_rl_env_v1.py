@@ -37,7 +37,9 @@ import torch
 
 from isaaclab.envs import ManagerBasedMTRLEnv
 
-from isaaclab_tasks.manager_based.multitask.reach.config.mt_franka.joint_pos_env_cfg import MTReachEnvCfg_Homogeneous as MTReachEnvCfg
+from isaaclab_tasks.manager_based.multitask.reach.config.mt_franka.joint_pos_env_cfg import (
+    MTReachEnvCfg_Homogeneous as MTReachEnvCfg,
+)
 
 
 def main():
