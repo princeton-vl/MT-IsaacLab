@@ -44,6 +44,7 @@ class ManagerBasedMTRLEnv(gym.Env):
         self.is_vector_env = is_vector_env
 
         self.cfg = cfg
+        self._is_closed = False
 
         self.envs: dict[str, ManagerBasedRLEnv] = {}
 
@@ -425,8 +426,23 @@ class ManagerBasedMTRLEnv(gym.Env):
         return self.obs_buf, infos_dict
 
     def close(self):
-        for env in self.envs.values():
-            env.close()
+        """Cleanup for the environment."""
+        if not self._is_closed:
+            # destructor is order-sensitive
+            del self.viewport_camera_controller
+            for task_env in self.envs.values():
+                del task_env.action_manager
+                del task_env.observation_manager
+                del task_env.event_manager
+                del task_env.recorder_manager
+                del task_env.scene
+            # clear callbacks and instance
+            self.sim.clear_all_callbacks()
+            self.sim.clear_instance()
+            # destroy the window
+            self.example_env._window = None
+            # update closing status
+            self._is_closed = True
 
     def render(self, recompute=False):
         # run a rendering step of the simulator
